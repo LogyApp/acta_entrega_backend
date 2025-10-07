@@ -34,8 +34,13 @@ const upload = multer({
     }
 });
 
-// Endpoint para subir PDF - CORREGIDO
+// Endpoint para subir PDF - CON CORS FORZADO
 router.post('/pdf-base64', async (req, res) => {
+    // ✅ ✅ ✅ FORZAR HEADERS CORS DIRECTAMENTE EN ESTA RUTA
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+
     try {
         console.log('📤 Recibiendo PDF para upload...');
         console.log('📍 Headers recibidos:', req.headers);
@@ -43,7 +48,7 @@ router.post('/pdf-base64', async (req, res) => {
 
         const {
             pdfBase64,
-            idUsuario,  // ← ESTE es el ID real del usuario
+            idUsuario,
             identrega,
             nombres,
             acta
@@ -56,7 +61,7 @@ router.post('/pdf-base64', async (req, res) => {
             });
         }
 
-        // ✅ USAR EL ID REAL DEL USUARIO - NO MÁS CARPETA FIJA
+        // ✅ USAR EL ID REAL DEL USUARIO
         const userId = (idUsuario || 'sin_id').toString().trim();
 
         // Validar que tenemos un ID válido
@@ -72,12 +77,11 @@ router.post('/pdf-base64', async (req, res) => {
         const timestamp = new Date().toISOString().split('T')[0];
         const safeUserName = userName.substring(0, 50);
 
-        // Nombre del archivo - AHORA CON CARPETA DINÁMICA
+        // Nombre del archivo - CARPETA DINÁMICA
         const fileName = `actas/${userId}/acta_${entregaId}_${safeUserName}_${timestamp}.pdf`;
 
         console.log(`📝 Subiendo a carpeta del usuario: ${fileName}`);
         console.log(`👤 Usuario real: ${userId}`);
-        console.log(`📦 Entrega ID: ${entregaId}`);
 
         // Convertir base64 a buffer
         const pdfBuffer = Buffer.from(pdfBase64, 'base64');
@@ -97,8 +101,6 @@ router.post('/pdf-base64', async (req, res) => {
         const result = await uploadFile(pdfBuffer, fileName, 'application/pdf');
 
         console.log('✅ PDF subido exitosamente a carpeta del usuario');
-        console.log(`📁 Archivo: ${result.fileName}`);
-        console.log(`🔗 URL: ${result.publicUrl}`);
 
         res.json({
             success: true,
