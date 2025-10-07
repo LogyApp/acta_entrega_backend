@@ -4,6 +4,24 @@ const { uploadFile, ensureFolderExists } = require('../config/gcs');
 
 const router = express.Router();
 
+// ✅ ✅ ✅ MIDDLEWARE CORS ESPECÍFICO PARA ESTE ROUTER
+router.use((req, res, next) => {
+    console.log('🔧 Aplicando headers CORS manualmente para:', req.method, req.path);
+
+    // Headers CORS esenciales
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+
+    // Manejar preflight OPTIONS inmediatamente
+    if (req.method === 'OPTIONS') {
+        console.log('🛬 Preflight OPTIONS recibido - respondiendo 200');
+        return res.status(200).end();
+    }
+
+    next();
+});
+
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 },
@@ -20,6 +38,8 @@ const upload = multer({
 router.post('/pdf-base64', async (req, res) => {
     try {
         console.log('📤 Recibiendo PDF para upload...');
+        console.log('📍 Headers recibidos:', req.headers);
+        console.log('🌐 Origin:', req.headers.origin);
 
         const {
             pdfBase64,
@@ -43,7 +63,7 @@ router.post('/pdf-base64', async (req, res) => {
         if (!userId || userId === 'sin_id' || userId === '123456789') {
             return res.status(400).json({
                 success: false,
-                error: 'ID de usuario no válido'
+                error: 'ID de usuario no válido: ' + userId
             });
         }
 
@@ -57,6 +77,7 @@ router.post('/pdf-base64', async (req, res) => {
 
         console.log(`📝 Subiendo a carpeta del usuario: ${fileName}`);
         console.log(`👤 Usuario real: ${userId}`);
+        console.log(`📦 Entrega ID: ${entregaId}`);
 
         // Convertir base64 a buffer
         const pdfBuffer = Buffer.from(pdfBase64, 'base64');
@@ -76,6 +97,8 @@ router.post('/pdf-base64', async (req, res) => {
         const result = await uploadFile(pdfBuffer, fileName, 'application/pdf');
 
         console.log('✅ PDF subido exitosamente a carpeta del usuario');
+        console.log(`📁 Archivo: ${result.fileName}`);
+        console.log(`🔗 URL: ${result.publicUrl}`);
 
         res.json({
             success: true,
@@ -83,7 +106,7 @@ router.post('/pdf-base64', async (req, res) => {
             data: {
                 fileName: result.fileName,
                 publicUrl: result.publicUrl,
-                userFolder: userId,  // ← Ahora sí muestra la carpeta real
+                userFolder: userId,
                 uploadTime: new Date().toISOString(),
                 bucket: process.env.GCS_BUCKET_NAME
             }
@@ -100,12 +123,22 @@ router.post('/pdf-base64', async (req, res) => {
 
 // Endpoint simple de prueba
 router.get('/test', (req, res) => {
+    console.log('✅ Test endpoint llamado desde:', req.headers.origin);
     res.json({
         success: true,
         message: 'Endpoint de upload funcionando',
-        carpeta_fija: '1001510303',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        cors: 'Configurado correctamente'
     });
+});
+
+// Endpoint específico para OPTIONS preflight
+router.options('/pdf-base64', (req, res) => {
+    console.log('🛬 Preflight OPTIONS específico para /pdf-base64');
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.status(200).end();
 });
 
 module.exports = router;
