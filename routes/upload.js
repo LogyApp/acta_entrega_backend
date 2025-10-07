@@ -4,22 +4,34 @@ const { uploadFile, ensureFolderExists } = require('../config/gcs');
 
 const router = express.Router();
 
-// ✅ ✅ ✅ MIDDLEWARE CORS ESPECÍFICO PARA ESTE ROUTER
-router.use((req, res, next) => {
-    console.log('🔧 Aplicando headers CORS manualmente para:', req.method, req.path);
+console.log('🔄 Cargando upload.js con CORS COMPLETO...');
 
-    // Headers CORS esenciales
+// ✅ MIDDLEWARE CORS GLOBAL PARA ESTE ROUTER
+router.use((req, res, next) => {
+    console.log('🔧 CORS Middleware ejecutado para:', req.method, req.path);
+    console.log('📍 Origin:', req.headers.origin);
+
+    // HEADERS CORS ESENCIALES
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
 
-    // Manejar preflight OPTIONS inmediatamente
+    // MANEJAR PREFLIGHT OPTIONS
     if (req.method === 'OPTIONS') {
-        console.log('🛬 Preflight OPTIONS recibido - respondiendo 200');
+        console.log('🛬 Preflight OPTIONS - RESPONDIENDO 200');
         return res.status(200).end();
     }
 
     next();
+});
+
+// ✅ MANEJADOR ESPECÍFICO PARA OPTIONS (PREFLIGHT)
+router.options('/pdf-base64', (req, res) => {
+    console.log('🎯 Preflight OPTIONS específico para /pdf-base64');
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.status(200).end();
 });
 
 const upload = multer({
@@ -34,9 +46,9 @@ const upload = multer({
     }
 });
 
-// Endpoint para subir PDF - CON CORS FORZADO
+// Endpoint para subir PDF
 router.post('/pdf-base64', async (req, res) => {
-    // ✅ ✅ ✅ FORZAR HEADERS CORS DIRECTAMENTE EN ESTA RUTA
+    // ✅ HEADERS CORS ADICIONALES POR SI ACASO
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
@@ -132,15 +144,6 @@ router.get('/test', (req, res) => {
         timestamp: new Date().toISOString(),
         cors: 'Configurado correctamente'
     });
-});
-
-// Endpoint específico para OPTIONS preflight
-router.options('/pdf-base64', (req, res) => {
-    console.log('🛬 Preflight OPTIONS específico para /pdf-base64');
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    res.status(200).end();
 });
 
 module.exports = router;
